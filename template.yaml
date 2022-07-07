@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  subscription-app
+
+  Sample SAM Template for subscription-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Runtime: python3.9
+    Timeout: 3
+    Environment:
+      Variables:
+        SUBSCRIBE_TABLE: !Ref CourseSubscriptionTable
+
+Resources:
+  CourseSubscriptionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: test
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
+  CourseSubcriptionCreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: subscriber_api/
+      Handler: create.lambda_handler
+      Events:
+        CreateSubscribe:
+          Type: Api
+          Properties:
+            Path: /subscription/create
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CourseSubscriptionTable
+
+  CourseSubcriptionGetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: subscriber_api/
+      Handler: get.lambda_handler
+      Events:
+        GetSubscribe:
+          Type: Api
+          Properties:
+            Path: /subscription/get/{pk}
+            Method: GET
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CourseSubscriptionTable
+
+  CourseSubcriptionDeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: subscriber_api/
+      Handler: delete.lambda_handler
+      Events:
+        DeleteSubscribe:
+          Type: Api
+          Properties:
+            Path: /subscription/delete/{pk}/{sk}
+            Method: DELETE
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CourseSubscriptionTable
+
+  CourseSubcriptionUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: subscriber_api/
+      Handler: update.lambda_handler
+      Events:
+        DeleteSubscribe:
+          Type: Api
+          Properties:
+            Path: /subscription/update
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CourseSubscriptionTable
