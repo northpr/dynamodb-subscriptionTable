@@ -1,23 +1,28 @@
-import simplejson as json
-import os
-import boto3
+import json
+from helper import Helper
 
-dynamodb = boto3.resource("dynamodb")
-table_name = os.environ.get("SUBSCRIBE_TABLE")
+hlp = Helper()
+
 
 def lambda_handler(event, context):
-    table = dynamodb.Table(table_name)
+    dynamodb, table = hlp.connect_dynamodb("SUBSCRIBE_TABLE")
     path_parameters = event['pathParameters']
+
+    # # Validate the partition and sort key
+    # if not hlp.validate_pk(path_parameters['pk']):
+    #     return hlp.json_error("Partition key is not match the format")
+    # if not hlp.validate_sk(path_parameters['sk']):
+    #     return hlp.json_error("Sort key is not match the format")
+
     deleted_item = table.delete_item(
         Key={
             "PK": path_parameters["pk"],
             "SK": path_parameters["sk"]
         }
     )
-    return {
-        'statusCode': 200,
-        'headers': {},
-        'body': json.dumps({"message": f"Customer deleted"})
-    }
+    if deleted_item['ResponseMetadata']['HTTPStatusCode'] == 200:
+        return hlp.json_success("Item deleted")
+    else:
+        return hlp.json_error("Cannot delete items")
 
 

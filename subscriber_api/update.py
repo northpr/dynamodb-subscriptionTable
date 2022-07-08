@@ -1,14 +1,16 @@
-import simplejson as json
-import os
-import boto3
+import json
+from helper import Helper
 
-dynamodb = boto3.resource("dynamodb")
-table_name = os.environ.get("SUBSCRIBE_TABLE")
+hlp = Helper()
 
 
 def lambda_handler(event, context):
-    table = dynamodb.Table(table_name)
+    dynamodb, table = hlp.connect_dynamodb("SUBSCRIBE_TABLE")
     subscribers = json.loads(event['body'])
+
+    # To check the body is match the format or not
+    if not hlp.validate_body(subscribers):
+        return hlp.json_error("Validation failed.")
 
     added_item = table.update_item(
         Key={
@@ -30,8 +32,7 @@ def lambda_handler(event, context):
 
     )
 
-    return {
-        'statusCode': 200,
-        'headers': {},
-        'body': json.dumps({"message": "Subscriber Updated}"})
-    }
+    if added_item['ResponseMetadata']['HTTPStatusCode'] == 200:
+        return hlp.json_success(json.dumps(subscribers))
+    else:
+        return hlp.json_error("Cannot create items")

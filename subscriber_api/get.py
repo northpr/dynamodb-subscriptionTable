@@ -1,19 +1,20 @@
-import simplejson as json
-import os
-import boto3
+import json
 from boto3.dynamodb.conditions import Key
+from helper import Helper
 
-dynamodb = boto3.resource("dynamodb")
-table_name = os.environ.get("SUBSCRIBE_TABLE")
+hlp = Helper()
 
 
 def lambda_handler(event, context):
-    table = dynamodb.Table(table_name)
+    dynamodb, table = hlp.connect_dynamodb("SUBSCRIBE_TABLE")
     path_parameters = event['pathParameters']
+
+    if not hlp.validate_pk(path_parameters['pk']):
+        return hlp.json_error("Partition key is error")
+
     response = table.query(KeyConditionExpression=Key('PK').eq(path_parameters['pk']))
 
-    return {
-        'statusCode': 200,
-        'headers': {},
-        'body': json.dumps(response['Items'])
-    }
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        return hlp.json_success(json.dumps(response['Items']))
+    else:
+        return hlp.json_error("Cannot get items")

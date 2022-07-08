@@ -1,23 +1,32 @@
-import simplejson as json
-import os
-import boto3
-from subscriber_api.helper import Helper
+import json
+from helper import Helper
 
-dynamodb = boto3.resource("dynamodb")
-table_name = os.environ.get("SUBSCRIBE_TABLE")
+hlp = Helper()
 
 
 def lambda_handler(event, context):
+    dynamodb, table = hlp.connect_dynamodb("SUBSCRIBE_TABLE")
     subscribers = json.loads(event['body'])
-    table = dynamodb.Table(table_name)
-    response = table.put_item(TableName=table_name, Item=subscribers)
 
-    return {
-        "statusCode": 201,
-        "headers": {},
-        "body": json.dumps({"message": "Subscribers created"})
-    }
+    # Validate the partition key
+    if not hlp.validate_pk(subscribers['PK']):  # if function is false it will return
+        return hlp.json_error("Partition key is error")
 
+    # To check the body is match the format or not
+    if not hlp.validate_body(subscribers):
+        return hlp.json_error("Validation failed.")
+
+    response = table.put_item(Item=subscribers)
+
+    # return {
+    #     "statusCode": 201,
+    #     "headers": {},
+    #     "body": json.dumps({"message": "Subscribers created"})
+    # }
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        return hlp.json_success(json.dumps(subscribers))
+    else:
+        return hlp.json_error("Cannot create items")
 
 
 
